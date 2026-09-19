@@ -5,14 +5,14 @@ import { prisma } from '@/lib/prisma';
 import { PageHeader, StatusPill } from '@/components/ui';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { effectiveStatus } from '@/lib/invoice';
-import { RecordPaymentButton } from '@/app/ap/payments/PaymentDialog';
+import { RecordReceiptButton } from '@/app/(app)/ar/receipts/ReceiptDialog';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PurchaseInvoiceDetailPage({ params }: { params: { id: string } }) {
-  const invoice = await prisma.purchaseInvoice.findUnique({
+export default async function SalesInvoiceDetailPage({ params }: { params: { id: string } }) {
+  const invoice = await prisma.salesInvoice.findUnique({
     where: { id: params.id },
-    include: { vendor: true, lines: true, payments: true },
+    include: { customer: true, lines: true, receipts: true },
   });
   if (!invoice) notFound();
 
@@ -21,21 +21,21 @@ export default async function PurchaseInvoiceDetailPage({ params }: { params: { 
 
   return (
     <div>
-      <Link href="/ap/purchase-invoices" className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white">
-        <ArrowLeft className="h-4 w-4" /> Back to purchase invoices
+      <Link href="/ar/sales-invoices" className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white">
+        <ArrowLeft className="h-4 w-4" /> Back to sales invoices
       </Link>
 
       <PageHeader
         title={invoice.invoiceNumber}
-        breadcrumb={['Accounts Payable', 'Purchase Invoices']}
-        description={invoice.vendor.name}
+        breadcrumb={['Accounts Receivable', 'Sales Invoices']}
+        description={invoice.customer.name}
         actions={
           <>
             <StatusPill status={status} />
             {balance > 0.01 && (
-              <RecordPaymentButton
-                label="Record Payment"
-                invoices={[{ id: invoice.id, invoiceNumber: invoice.invoiceNumber, vendorId: invoice.vendorId, vendorName: invoice.vendor.name, balance }]}
+              <RecordReceiptButton
+                label="Record Receipt"
+                invoices={[{ id: invoice.id, invoiceNumber: invoice.invoiceNumber, customerId: invoice.customerId, customerName: invoice.customer.name, balance }]}
                 presetInvoiceId={invoice.id}
               />
             )}
@@ -73,17 +73,17 @@ export default async function PurchaseInvoiceDetailPage({ params }: { params: { 
         </table>
       </div>
 
-      {invoice.payments.length > 0 && (
+      {invoice.receipts.length > 0 && (
         <div className="glass-panel overflow-hidden">
-          <div className="px-4 pt-4 text-sm font-semibold text-white">Payments Applied</div>
+          <div className="px-4 pt-4 text-sm font-semibold text-white">Receipts Applied</div>
           <table className="table-shell">
-            <thead><tr><th>Payment #</th><th>Date</th><th className="text-right">Amount</th></tr></thead>
+            <thead><tr><th>Receipt #</th><th>Date</th><th className="text-right">Amount</th></tr></thead>
             <tbody>
-              {invoice.payments.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-medium text-white">{p.paymentNumber}</td>
-                  <td className="text-white/50">{formatDate(p.date)}</td>
-                  <td className="text-right font-mono text-white/80">{formatCurrency(p.amount)}</td>
+              {invoice.receipts.map((r) => (
+                <tr key={r.id}>
+                  <td className="font-medium text-white">{r.receiptNumber}</td>
+                  <td className="text-white/50">{formatDate(r.date)}</td>
+                  <td className="text-right font-mono text-white/80">{formatCurrency(r.amount)}</td>
                 </tr>
               ))}
             </tbody>

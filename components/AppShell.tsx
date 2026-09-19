@@ -3,9 +3,20 @@
 import { useState } from 'react';
 import { Menu, Search, Bell } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
+import { SignOutButton } from '@/components/SignOutButton';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type ShellUser = { name?: string | null; email?: string | null } | null | undefined;
+
+export function AppShell({ children, user }: { children: React.ReactNode; user?: ShellUser }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const label = user?.name || user?.email || 'Account';
+  const initials = label
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join('') || 'AC';
 
   return (
     <div className="flex min-h-screen">
@@ -41,10 +52,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="hidden items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.04] py-1.5 pl-1.5 pr-3.5 sm:flex">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 text-xs font-semibold text-base-950">
-              MC
+              {initials}
             </div>
-            <span className="text-sm text-white/80">My Company</span>
+            <span className="max-w-[10rem] truncate text-sm text-white/80">{label}</span>
           </div>
+
+          <SignOutButton />
         </header>
 
         <main className="flex-1 pb-8">{children}</main>
