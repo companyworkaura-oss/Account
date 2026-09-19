@@ -1,22 +1,20 @@
 // Accounting Suite — Prisma schema
-// Local-first: SQLite file on this PC. To publish/host later, change
-// `provider` below to "postgresql" (or "mysql"), point DATABASE_URL at your
-// hosted database, then run `npx prisma db push`. No application code needs
-// to change because all data access goes through Prisma Client.
+// Points at Postgres (Vercel/Neon) so it works for both local dev and the
+// published app — one database, one schema, no drift between environments.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// SQLite has no native enum support in Prisma, so status/type fields below
-// are plain Strings. The allowed values are documented and enforced in
-// lib/types.ts and are unaffected if you later switch the datasource to
-// Postgres (which does support Prisma enums, though String continues to work).
+// Status/type fields below are plain Strings rather than Prisma enums (this
+// schema originally targeted SQLite, which has no native enum support, and
+// there was no reason to churn it once we moved to Postgres). The allowed
+// values are documented and enforced in lib/types.ts.
 
 model CompanySettings {
   id               String   @id @default(cuid())

@@ -1,31 +1,37 @@
 # Account Suite
 
-A local-first accounting web app. It runs on your PC today, stores its data in a
-file on your PC, and is structured so you can publish/host it later with a
-one-line config change — no rewrite required.
+An accounting web app built with Next.js, running on a real Postgres database
+so the same setup works for local development and for a publicly hosted
+instance — no drift between the two.
 
 ## Tech stack
 
 - **Next.js 14 (App Router) + TypeScript + React** — UI and server logic in one app
-- **Prisma ORM** — data access layer; the same code works against SQLite or a
-  hosted database
-- **SQLite** (default) — a single `prisma/dev.db` file on your machine, no
-  database server to install
+- **Prisma ORM + Postgres** — one database for local dev and production alike
+  (Neon, Supabase, Vercel Postgres, or your own server all work)
 - **Tailwind CSS** — the dark glass UI theme
 - **Recharts** — dashboard/report charts
 - **Auth.js (NextAuth v5)** — email/password login, sessions, route protection
 
 ## Running locally
 
+You need a Postgres database first — a free one from
+[Neon](https://neon.tech) or [Supabase](https://supabase.com) takes a couple
+of minutes to set up. Copy `.env.example` to `.env` and fill in:
+
+```bash
+DATABASE_URL="postgresql://..."   # your connection string
+AUTH_SECRET="..."                 # node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Then:
+
 ```bash
 npm install
-npm run db:push        # creates prisma/dev.db and the schema
+npm run db:push        # creates the schema on your database
 npm run prisma:seed    # loads a starter chart of accounts + sample data
 npm run dev            # http://localhost:3000
 ```
-
-You'll need an `AUTH_SECRET` in your `.env` (see `.env.example` — generate your
-own with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
 
 The first time you open the app it sends you to `/signup` to create the one
 owner account (email + password). After that, sign-ups are closed and
@@ -33,8 +39,9 @@ everyone signs in at `/login` — every page in the app requires being signed
 in. There's no invite/multi-user flow yet; if you need more than one login,
 say so and it can be added.
 
-All your data lives in `prisma/dev.db` on this computer. Back it up by copying
-that file.
+All your data lives in that Postgres database, not on your machine — most
+providers (Neon included) can back it up or let you export a snapshot from
+their dashboard.
 
 ## Modules
 
@@ -64,28 +71,17 @@ Project Accounting, Cost Center Accounting, Manufacturing/Production.
 which company is marked active — full per-company data separation isn't wired
 up yet.
 
-## Publishing / hosting later
+## Publishing / hosting
 
-The app was built so moving off your PC is a config change, not a rewrite:
-
-1. Provision a hosted database (Postgres is recommended — e.g. Neon, Supabase,
-   Railway, or your own server).
-2. In `prisma/schema.prisma`, change:
-   ```prisma
-   datasource db {
-     provider = "postgresql"   // was "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-3. Set `DATABASE_URL` to your hosted database's connection string, and set
-   `AUTH_SECRET` to a fresh random value (in a `.env` file locally, or your
-   host's environment variables panel). Never reuse the value from your local
-   `.env` for a publicly hosted instance.
-4. Run `npx prisma db push` once to create the schema on the new database.
-5. Deploy the Next.js app (Vercel, Render, a VPS with `npm run build && npm run
-   start`, etc.). No application code changes are needed — every data access
-   goes through Prisma.
-6. Visit the deployed URL — it'll send you to `/signup` to create the owner
+1. Set `DATABASE_URL` (your Postgres connection string — can be the same
+   database you use locally, or a separate one) and a **fresh** `AUTH_SECRET`
+   in your host's environment variables panel. Never reuse your local
+   `AUTH_SECRET` for a publicly hosted instance.
+2. Run `npx prisma db push` once against that database if it doesn't already
+   have the schema.
+3. Deploy the Next.js app (Vercel, Render, a VPS with `npm run build && npm run
+   start`, etc.).
+4. Visit the deployed URL — it sends you to `/signup` to create the owner
    account on that database, exactly like the first run locally.
 
 ## Project structure
