@@ -40,6 +40,7 @@ model Account {
   parent      Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
   children    Account[]   @relation("AccountHierarchy")
   lines       JournalLine[]
+  budgets     Budget[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -82,6 +83,7 @@ model Vendor {
   isActive          Boolean           @default(true)
   purchaseInvoices  PurchaseInvoice[]
   payments          Payment[]
+  purchaseOrders    PurchaseOrder[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 }
@@ -140,6 +142,9 @@ model Customer {
   isActive      Boolean        @default(true)
   salesInvoices SalesInvoice[]
   receipts      Receipt[]
+  quotations    Quotation[]
+  salesOrders   SalesOrder[]
+  leads         Lead[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -199,6 +204,8 @@ model BankAccount {
   transactions    CashTransaction[]
   transfersFrom   BankTransfer[]    @relation("TransferFrom")
   transfersTo     BankTransfer[]    @relation("TransferTo")
+  expenseClaims   ExpenseClaim[]
+  posSales        POSSale[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 }
@@ -227,4 +234,292 @@ model BankTransfer {
   amount        Float
   notes         String?
   createdAt     DateTime    @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Fixed Assets Management
+// ---------------------------------------------------------------------------
+
+model Asset {
+  id                      String    @id @default(cuid())
+  name                    String
+  category                String?
+  purchaseDate            DateTime
+  purchaseCost            Float
+  salvageValue            Float     @default(0)
+  usefulLifeYears         Int
+  accumulatedDepreciation Float     @default(0)
+  status                  String    @default("ACTIVE") // ACTIVE, DISPOSED
+  disposalDate            DateTime?
+  disposalAmount          Float?
+  notes                   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Budgeting & Forecasting
+// ---------------------------------------------------------------------------
+
+model Budget {
+  id        String   @id @default(cuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  year      Int
+  amount    Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountId, year])
+}
+
+// ---------------------------------------------------------------------------
+// Expense Management
+// ---------------------------------------------------------------------------
+
+model ExpenseClaim {
+  id            String       @id @default(cuid())
+  expenseNumber String       @unique
+  employeeName  String
+  date          DateTime
+  category      String?
+  amount        Float
+  description   String?
+  status        String       @default("PENDING") // PENDING, APPROVED, REJECTED, REIMBURSED
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Tax Management
+// ---------------------------------------------------------------------------
+
+model TaxRate {
+  id        String   @id @default(cuid())
+  name      String
+  rate      Float
+  type      String   @default("VAT") // VAT, GST, WITHHOLDING, OTHER
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Inventory / Stock Management
+// ---------------------------------------------------------------------------
+
+model Item {
+  id                 String              @id @default(cuid())
+  sku                String              @unique
+  name               String
+  description        String?
+  unit               String              @default("pcs")
+  costPrice          Float               @default(0)
+  unitPrice          Float               @default(0)
+  quantityOnHand     Float               @default(0)
+  reorderLevel       Float               @default(0)
+  isActive           Boolean             @default(true)
+  movements          StockMovement[]
+  quotationLines     QuotationLine[]
+  salesOrderLines    SalesOrderLine[]
+  purchaseOrderLines PurchaseOrderLine[]
+  posSaleLines       POSSaleLine[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id])
+  date      DateTime
+  type      String   // IN, OUT, ADJUSTMENT
+  quantity  Float
+  reference String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Sales Management (Quotations, Sales Orders, Delivery Notes)
+// ---------------------------------------------------------------------------
+
+model Quotation {
+  id          String          @id @default(cuid())
+  quoteNumber String          @unique
+  customerId  String
+  customer    Customer        @relation(fields: [customerId], references: [id])
+  date        DateTime
+  expiryDate  DateTime
+  status      String          @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, CONVERTED
+  subtotal    Float           @default(0)
+  tax         Float           @default(0)
+  total       Float           @default(0)
+  notes       String?
+  lines       QuotationLine[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model QuotationLine {
+  id          String    @id @default(cuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?     @relation(fields: [itemId], references: [id])
+  description String
+  quantity    Float     @default(1)
+  unitPrice   Float     @default(0)
+  amount      Float     @default(0)
+}
+
+model SalesOrder {
+  id          String           @id @default(cuid())
+  orderNumber String           @unique
+  customerId  String
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  date        DateTime
+  status      String           @default("PENDING") // PENDING, CONFIRMED, DELIVERED, INVOICED, CANCELLED
+  subtotal    Float            @default(0)
+  tax         Float            @default(0)
+  total       Float            @default(0)
+  notes       String?
+  lines       SalesOrderLine[]
+  deliveryNotes DeliveryNote[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model SalesOrderLine {
+  id           String     @id @default(cuid())
+  salesOrderId String
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  itemId       String?
+  item         Item?      @relation(fields: [itemId], references: [id])
+  description  String
+  quantity     Float      @default(1)
+  unitPrice    Float      @default(0)
+  amount       Float      @default(0)
+}
+
+model DeliveryNote {
+  id             String     @id @default(cuid())
+  deliveryNumber String     @unique
+  salesOrderId   String
+  salesOrder     SalesOrder @relation(fields: [salesOrderId], references: [id])
+  date           DateTime
+  status         String     @default("PENDING") // PENDING, DELIVERED
+  notes          String?
+  createdAt      DateTime   @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Purchase Management (Purchase Orders, Goods Receipt)
+// ---------------------------------------------------------------------------
+
+model PurchaseOrder {
+  id            String              @id @default(cuid())
+  poNumber      String              @unique
+  vendorId      String
+  vendor        Vendor              @relation(fields: [vendorId], references: [id])
+  date          DateTime
+  status        String              @default("DRAFT") // DRAFT, SENT, RECEIVED, INVOICED, CANCELLED
+  subtotal      Float               @default(0)
+  tax           Float               @default(0)
+  total         Float               @default(0)
+  notes         String?
+  lines         PurchaseOrderLine[]
+  goodsReceipts GoodsReceipt[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  itemId          String?
+  item            Item?         @relation(fields: [itemId], references: [id])
+  description     String
+  quantity        Float         @default(1)
+  unitPrice       Float         @default(0)
+  amount          Float         @default(0)
+}
+
+model GoodsReceipt {
+  id              String        @id @default(cuid())
+  grNumber        String        @unique
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  date            DateTime
+  notes           String?
+  createdAt       DateTime      @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Point of Sale
+// ---------------------------------------------------------------------------
+
+model POSSale {
+  id             String        @id @default(cuid())
+  saleNumber     String        @unique
+  date           DateTime      @default(now())
+  customerName   String?
+  bankAccountId  String
+  bankAccount    BankAccount   @relation(fields: [bankAccountId], references: [id])
+  subtotal       Float         @default(0)
+  tax            Float         @default(0)
+  total          Float         @default(0)
+  amountTendered Float         @default(0)
+  changeGiven    Float         @default(0)
+  lines          POSSaleLine[]
+  createdAt      DateTime      @default(now())
+}
+
+model POSSaleLine {
+  id          String  @id @default(cuid())
+  posSaleId   String
+  posSale     POSSale @relation(fields: [posSaleId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?   @relation(fields: [itemId], references: [id])
+  description String
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  amount      Float   @default(0)
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Company Management
+// ---------------------------------------------------------------------------
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  currency  String   @default("USD")
+  taxId     String?
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// CRM Integration (lead tracking)
+// ---------------------------------------------------------------------------
+
+model Lead {
+  id         String    @id @default(cuid())
+  name       String
+  company    String?
+  email      String?
+  phone      String?
+  stage      String    @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL, WON, LOST
+  value      Float     @default(0)
+  notes      String?
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
