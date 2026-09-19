@@ -7,6 +7,10 @@ import type { NextAuthConfig } from 'next-auth';
 export const authConfig: NextAuthConfig = {
   pages: { signIn: '/login' },
   session: { strategy: 'jwt' },
+  // Needed to self-host in production (npm run start) behind a plain host
+  // header, e.g. on your own PC or a VPS. Hosts like Vercel set this
+  // automatically, but it doesn't hurt to have it set explicitly everywhere.
+  trustHost: true,
   providers: [],
   callbacks: {
     authorized({ auth, request }) {
