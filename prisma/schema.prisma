@@ -1,0 +1,230 @@
+// Accounting Suite — Prisma schema
+// Local-first: SQLite file on this PC. To publish/host later, change
+// `provider` below to "postgresql" (or "mysql"), point DATABASE_URL at your
+// hosted database, then run `npx prisma db push`. No application code needs
+// to change because all data access goes through Prisma Client.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite has no native enum support in Prisma, so status/type fields below
+// are plain Strings. The allowed values are documented and enforced in
+// lib/types.ts and are unaffected if you later switch the datasource to
+// Postgres (which does support Prisma enums, though String continues to work).
+
+model CompanySettings {
+  id               String   @id @default(cuid())
+  name             String   @default("My Company")
+  currency         String   @default("USD")
+  fiscalYearStart  Int      @default(1) // month 1-12
+  address          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Account {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  type        String
+  subType     String?
+  description String?
+  isActive    Boolean     @default(true)
+  parentId    String?
+  parent      Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children    Account[]   @relation("AccountHierarchy")
+  lines       JournalLine[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([type])
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  entryNumber String        @unique
+  date        DateTime
+  memo        String?
+  reference   String?
+  status      String        @default("POSTED")
+  lines       JournalLine[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model JournalLine {
+  id             String       @id @default(cuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account      @relation(fields: [accountId], references: [id])
+  debit          Float        @default(0)
+  credit         Float        @default(0)
+  description    String?
+
+  @@index([accountId])
+  @@index([journalEntryId])
+}
+
+model Vendor {
+  id                String            @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  address           String?
+  taxId             String?
+  isActive          Boolean           @default(true)
+  purchaseInvoices  PurchaseInvoice[]
+  payments          Payment[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model PurchaseInvoice {
+  id            String                @id @default(cuid())
+  invoiceNumber String                @unique
+  vendorId      String
+  vendor        Vendor                @relation(fields: [vendorId], references: [id])
+  date          DateTime
+  dueDate       DateTime
+  status        String                @default("UNPAID")
+  subtotal      Float                 @default(0)
+  tax           Float                 @default(0)
+  total         Float                 @default(0)
+  amountPaid    Float                 @default(0)
+  notes         String?
+  lines         PurchaseInvoiceLine[]
+  payments      Payment[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+}
+
+model PurchaseInvoiceLine {
+  id                String          @id @default(cuid())
+  purchaseInvoiceId String
+  purchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  description       String
+  quantity          Float           @default(1)
+  unitPrice         Float           @default(0)
+  amount            Float           @default(0)
+}
+
+model Payment {
+  id                String           @id @default(cuid())
+  paymentNumber     String           @unique
+  vendorId          String
+  vendor            Vendor           @relation(fields: [vendorId], references: [id])
+  purchaseInvoiceId String?
+  purchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+  date              DateTime
+  amount            Float
+  method            String           @default("BANK_TRANSFER")
+  reference         String?
+  notes             String?
+  createdAt         DateTime         @default(now())
+}
+
+model Customer {
+  id            String         @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  address       String?
+  taxId         String?
+  isActive      Boolean        @default(true)
+  salesInvoices SalesInvoice[]
+  receipts      Receipt[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model SalesInvoice {
+  id            String             @id @default(cuid())
+  invoiceNumber String             @unique
+  customerId    String
+  customer      Customer           @relation(fields: [customerId], references: [id])
+  date          DateTime
+  dueDate       DateTime
+  status        String             @default("UNPAID")
+  subtotal      Float              @default(0)
+  tax           Float              @default(0)
+  total         Float              @default(0)
+  amountPaid    Float              @default(0)
+  notes         String?
+  lines         SalesInvoiceLine[]
+  receipts      Receipt[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model SalesInvoiceLine {
+  id             String       @id @default(cuid())
+  salesInvoiceId String
+  salesInvoice   SalesInvoice @relation(fields: [salesInvoiceId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Float        @default(1)
+  unitPrice      Float        @default(0)
+  amount         Float        @default(0)
+}
+
+model Receipt {
+  id             String        @id @default(cuid())
+  receiptNumber  String        @unique
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  salesInvoiceId String?
+  salesInvoice   SalesInvoice? @relation(fields: [salesInvoiceId], references: [id])
+  date           DateTime
+  amount         Float
+  method         String        @default("BANK_TRANSFER")
+  reference      String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+}
+
+model BankAccount {
+  id              String            @id @default(cuid())
+  name            String
+  bankName        String?
+  accountNumber   String?
+  currency        String            @default("USD")
+  openingBalance  Float             @default(0)
+  isActive        Boolean           @default(true)
+  transactions    CashTransaction[]
+  transfersFrom   BankTransfer[]    @relation("TransferFrom")
+  transfersTo     BankTransfer[]    @relation("TransferTo")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model CashTransaction {
+  id            String      @id @default(cuid())
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+  date          DateTime
+  type          String
+  amount        Float
+  description   String?
+  category      String?
+  reference     String?
+  reconciled    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+}
+
+model BankTransfer {
+  id            String      @id @default(cuid())
+  date          DateTime
+  fromAccountId String
+  fromAccount   BankAccount @relation("TransferFrom", fields: [fromAccountId], references: [id])
+  toAccountId   String
+  toAccount     BankAccount @relation("TransferTo", fields: [toAccountId], references: [id])
+  amount        Float
+  notes         String?
+  createdAt     DateTime    @default(now())
+}
