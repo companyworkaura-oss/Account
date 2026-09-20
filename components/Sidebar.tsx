@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ChevronDown, Home, Wallet } from 'lucide-react';
+import { ChevronDown, Home, Users as UsersIcon, Wallet } from 'lucide-react';
 import { navGroups } from '@/lib/nav';
 import { getIcon } from '@/components/icon-map';
 import clsx from 'clsx';
@@ -57,6 +57,18 @@ export function Sidebar({
         >
           <Home className="h-4 w-4" />
           Dashboard
+        </Link>
+
+        <Link
+          href="/settings/users"
+          onClick={onClose}
+          className={clsx(
+            'mb-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+            pathname.startsWith('/settings/users') ? 'bg-white/[0.09] text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+          )}
+        >
+          <UsersIcon className="h-4 w-4" />
+          Users
         </Link>
 
         <div className="my-2 h-px bg-white/10" />

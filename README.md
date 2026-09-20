@@ -34,10 +34,33 @@ npm run dev            # http://localhost:3000
 ```
 
 The first time you open the app it sends you to `/signup` to create the one
-owner account (email + password). After that, sign-ups are closed and
-everyone signs in at `/login` — every page in the app requires being signed
-in. There's no invite/multi-user flow yet; if you need more than one login,
-say so and it can be added.
+owner account (email + password). After that, sign-ups are closed — there's
+no open sign-up page for random visitors. To let someone else in, sign in
+yourself and go to **Users** in the sidebar (`/settings/users`) to create a
+login for them; they'll use that email/password at `/login`.
+
+### Optional: Sign in with Google
+
+People you've added under Users can also sign in with Google instead of a
+password, if you set it up:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   → create a project (or pick an existing one).
+2. **OAuth consent screen** → configure it (External, add an app name and
+   your email as support contact — no need to publish it, "Testing" mode is
+   fine for a handful of known users).
+3. **Credentials** → **Create Credentials** → **OAuth client ID** → Application
+   type **Web application**.
+4. Under **Authorized redirect URIs**, add:
+   - `http://localhost:3000/api/auth/callback/google` (local dev)
+   - `https://<your-deployed-domain>/api/auth/callback/google` (production)
+5. Copy the **Client ID** and **Client secret** into your `.env` (and your
+   host's environment variables) as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
+
+Google sign-in only works for emails that already exist under Users — it's
+an alternative way to log into an account someone already created, not a
+second way to sign up. Leave these two variables unset to skip Google
+entirely; the app works fine on email/password alone.
 
 All your data lives in that Postgres database, not on your machine — most
 providers (Neon included) can back it up or let you export a snapshot from
