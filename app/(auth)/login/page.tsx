@@ -26,9 +26,9 @@ export default async function LoginPage() {
         </>
       )}
       <p className="mt-5 text-center text-xs text-white/40">
-        Setting this up for the first time?{' '}
+        Don&apos;t have an account?{' '}
         <Link href="/signup" className="font-medium text-accent-400 hover:text-accent-300">
-          Create the owner account
+          Sign up
         </Link>
       </p>
     </div>

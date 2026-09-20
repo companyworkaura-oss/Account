@@ -33,16 +33,16 @@ npm run prisma:seed    # loads a starter chart of accounts + sample data
 npm run dev            # http://localhost:3000
 ```
 
-The first time you open the app it sends you to `/signup` to create the one
-owner account (email + password). After that, sign-ups are closed — there's
-no open sign-up page for random visitors. To let someone else in, sign in
-yourself and go to **Users** in the sidebar (`/settings/users`) to create a
-login for them; they'll use that email/password at `/login`.
+Sign-up is open at `/signup` — anyone with the URL can create an account and
+they'll see the same shared books as everyone else (there's no per-user data
+separation yet). If you'd rather hand someone a login yourself instead of
+having them sign up, use **Users** in the sidebar (`/settings/users`).
 
 ### Optional: Sign in with Google
 
-People you've added under Users can also sign in with Google instead of a
-password, if you set it up:
+People can also sign in with Google instead of a password, if you set it up.
+Signing in with Google auto-creates an account the same way `/signup` does
+if that email hasn't been seen before.
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
    → create a project (or pick an existing one).
@@ -57,10 +57,8 @@ password, if you set it up:
 5. Copy the **Client ID** and **Client secret** into your `.env` (and your
    host's environment variables) as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
 
-Google sign-in only works for emails that already exist under Users — it's
-an alternative way to log into an account someone already created, not a
-second way to sign up. Leave these two variables unset to skip Google
-entirely; the app works fine on email/password alone.
+Leave `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` unset to skip Google entirely —
+the app works fine on email/password alone.
 
 All your data lives in that Postgres database, not on your machine — most
 providers (Neon included) can back it up or let you export a snapshot from

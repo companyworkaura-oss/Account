@@ -6,11 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { signIn } from '@/lib/auth';
 
 export async function signup(formData: FormData) {
-  const existing = await prisma.user.count();
-  if (existing > 0) {
-    throw new Error('Sign-ups are closed. Ask the workspace owner to sign in and set up access.');
-  }
-
   const name = String(formData.get('name') ?? '').trim();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const password = String(formData.get('password') ?? '');
@@ -19,6 +14,9 @@ export async function signup(formData: FormData) {
   if (!email || !password) throw new Error('Email and password are required.');
   if (password.length < 8) throw new Error('Password must be at least 8 characters.');
   if (password !== confirmPassword) throw new Error('Passwords do not match.');
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) throw new Error('An account with this email already exists.');
 
   const passwordHash = await bcrypt.hash(password, 12);
   await prisma.user.create({ data: { name: name || null, email, passwordHash } });

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import NextAuth, { type NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
@@ -40,13 +41,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig.callbacks,
     async signIn({ user, account }) {
       // Credentials already checked the password in authorize() above.
-      // Google only gets in if that email was already added under Users —
-      // there's still no open sign-up, Google is just another way to log
-      // into an account someone already created for you.
+      // Google sign-in auto-creates a User row on first use (sign-up is
+      // open), matching what /signup does for email/password.
       if (account?.provider === 'google') {
         if (!user.email) return false;
-        const existing = await prisma.user.findUnique({ where: { email: user.email.toLowerCase() } });
-        return !!existing;
+        const email = user.email.toLowerCase();
+        let dbUser = await prisma.user.findUnique({ where: { email } });
+        if (!dbUser) {
+          const unusablePasswordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
+          dbUser = await prisma.user.create({ data: { name: user.name ?? null, email, passwordHash: unusablePasswordHash } });
+        }
+        // Google's own id isn't our User.id — swap it so jwt/session below
+        // carry our database id, same as the credentials login path.
+        user.id = dbUser.id;
       }
       return true;
     },

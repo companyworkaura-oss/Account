@@ -17,7 +17,7 @@ export default async function UsersPage() {
     <div>
       <PageHeader
         title="Users"
-        description="People who can sign in to this workspace. There's no open sign-up — only you can create logins here."
+        description="People who can sign in to this workspace. Anyone can also join themselves at /signup — use this page if you'd rather set up a login for them directly."
         actions={<NewUserButton />}
       />
 
